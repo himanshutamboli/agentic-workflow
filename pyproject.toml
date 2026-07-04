@@ -7,7 +7,7 @@ requires-python = ">=3.13"
 dependencies = []
 
 [project.scripts]
-agentic-workflow = "agentic_workflow:main"
+agentic-workflow = "agentic_workflow.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]

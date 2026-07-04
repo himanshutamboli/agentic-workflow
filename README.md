@@ -47,15 +47,37 @@ right call?). This repo builds that agent as real software, not a prompt.
   unchanged (`observed.py`) — **the observability flagship watches the agent flagship**.
 - **`evaluation.py`** — labeled triage `Scenario`s scored on whether the agent reaches the
   *correct call*. Headline **task-success-rate** + **false-rollback rate**; see below.
+- **`cli.py`** — the interface an on-call engineer uses: `agentic-workflow triage` prints the
+  agent's reasoning transcript + verdict; `agentic-workflow eval` runs the scenario set.
 - **`tools_builtin.py` + `mock_ops.py`** — the concrete triage tools (recent deploys, error
   rate, metrics, log search, runbook lookup, and a side-effecting `rollback_deploy` action)
   over a deterministic mock ops backend seeded with a coherent incident scenario.
 
 ```bash
 uv sync --dev
-uv run python -m agentic_workflow.agent        # triage demo
-uv run python -m agentic_workflow.evaluation   # task-success-rate → reports/agent_eval.md
+uv run agentic-workflow triage --scenario checkout   # triage one incident (transcript + verdict)
+uv run agentic-workflow eval                          # task-success-rate over labeled scenarios
 uv run pytest
+```
+
+```text
+$ agentic-workflow triage --scenario checkout
+🔎 Triaging INC-checkout (incident_triage)
+
+  1. plan: call get_error_rate({'service': 'checkout'})
+     └─ get_error_rate(...) → error rate 8.2% (baseline 0.5%) — ELEVATED
+  2. plan: call get_recent_deploys({'service': 'checkout'})
+     └─ get_recent_deploys(...) → 2 recent deploy(s)
+  3. plan: call search_logs({'service': 'checkout', 'pattern': 'ERROR'})
+     └─ search_logs(...) → 3 matching log line(s)
+  4. plan: call lookup_runbook({'symptom': 'elevated 5xx after deploy'})
+     └─ lookup_runbook(...) → runbook: elevated 5xx after deploy
+  5. plan: finish → roll back checkout@a1b2c3
+────────────────────────────────────────────────────────────
+✅ ACTION  (confidence 75%)
+  hypothesis: recent deploy checkout@a1b2c3 (20m ago) correlates with the elevated error rate
+  recommend : roll back checkout@a1b2c3
+────────────────────────────────────────────────────────────
 ```
 
 ## Evaluation
@@ -85,7 +107,7 @@ closes. That's why the eval exists.
 | 39 ✅ | Guardrails: retries, cost cap, step budget, human-in-the-loop approval |
 | 40 ✅ | **Instrumented with `llm-observatory`** — every run is a persisted trace (plan/tool spans) |
 | 41 ✅ | Agent eval: task-success-rate (83%) + false-rollback rate over labeled scenarios |
-| 42 | Interface (CLI/UI) + runnable demo |
+| 42 ✅ | CLI (`triage` transcript + verdict, `eval`) + runnable demo |
 | 43–44 | Docs + diagram + demo; ship v1.0 |
 
 ## License

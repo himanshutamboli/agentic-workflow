@@ -61,23 +61,11 @@ class Agent:
 
 
 def main() -> None:
+    from agentic_workflow.mock_ops import MockOps
     from agentic_workflow.planner import ScriptedPlanner
-    from agentic_workflow.tools import FunctionTool
+    from agentic_workflow.tools_builtin import build_registry
 
-    registry = ToolRegistry(
-        [
-            FunctionTool(
-                "get_recent_deploys",
-                "List recent deploys for a service",
-                lambda service: ("1 deploy in last hour", {"deploys": [f"{service}@a1b2c3"]}),
-            ),
-            FunctionTool(
-                "get_error_rate",
-                "Current error rate for a service",
-                lambda service: ("error rate 8.2%", {"error_rate": 0.082}),
-            ),
-        ]
-    )
+    registry = build_registry(MockOps())
     incident = Incident(
         id="INC-1",
         title="Checkout 500s",
@@ -87,15 +75,27 @@ def main() -> None:
     )
     planner = ScriptedPlanner(
         [
-            Action(kind="tool", tool="get_recent_deploys", args={"service": "checkout"}),
             Action(kind="tool", tool="get_error_rate", args={"service": "checkout"}),
+            Action(kind="tool", tool="get_recent_deploys", args={"service": "checkout"}),
+            Action(
+                kind="tool",
+                tool="search_logs",
+                args={"service": "checkout", "pattern": "PaymentGateway"},
+            ),
+            Action(
+                kind="tool",
+                tool="lookup_runbook",
+                args={"symptom": "elevated 5xx after deploy"},
+            ),
             Action(
                 kind="finish",
                 result=TriageResult(
                     incident_id="INC-1",
-                    hypothesis="recent deploy checkout@a1b2c3 raised the error rate",
+                    hypothesis=(
+                        "deploy checkout@a1b2c3 (20m ago) spiked errors — PaymentGateway timeouts"
+                    ),
                     recommended_action="roll back checkout@a1b2c3",
-                    confidence=0.7,
+                    confidence=0.72,
                 ),
             ),
         ]

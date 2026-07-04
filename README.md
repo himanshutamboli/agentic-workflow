@@ -34,6 +34,9 @@ right call?). This repo builds that agent as real software, not a prompt.
   `ScriptedPlanner` drives the skeleton and tests; an LLM planner arrives with the loop (Day 38).
 - **`agent.py`** — the planner/executor loop: plan → execute → observe → repeat, bounded by a
   step budget (escalates to on-call if exhausted).
+- **`tools_builtin.py` + `mock_ops.py`** — the concrete triage tools (recent deploys, error
+  rate, metrics, log search, runbook lookup, and a side-effecting `rollback_deploy` action)
+  over a deterministic mock ops backend seeded with a coherent incident scenario.
 
 ```bash
 uv sync --dev
@@ -46,7 +49,7 @@ uv run pytest
 | Day | Deliverable |
 |---|---|
 | 36 ✅ | Architecture: workflow chosen (AIOps triage), agent skeleton + tool interface |
-| 37 | Real tools (deploys, metrics, logs, runbooks, actions) |
+| 37 ✅ | Real tools: deploys, error rate, metrics, log search, runbook, rollback action |
 | 38 | Orchestration loop with state + an LLM planner |
 | 39 | Guardrails: retries, timeouts, cost caps, human-in-the-loop |
 | 40 | **Instrument the agent with `llm-observatory`** (every run traced + scored) |

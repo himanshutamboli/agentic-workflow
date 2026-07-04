@@ -3,7 +3,7 @@
 [![CI](https://github.com/himanshutamboli/agentic-workflow/actions/workflows/ci.yml/badge.svg)](https://github.com/himanshutamboli/agentic-workflow/actions/workflows/ci.yml)
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/)
 [![Ruff](https://img.shields.io/badge/lint-ruff-orange.svg)](https://github.com/astral-sh/ruff)
-[![status](https://img.shields.io/badge/status-building-blue.svg)](#roadmap)
+[![version](https://img.shields.io/badge/version-v1.0-brightgreen.svg)](#roadmap)
 
 > An **AIOps incident-triage** agent: it ingests an incident, gathers signals through tools,
 > forms a hypothesis, and recommends remediation — bounded by guardrails, measured by an eval,
@@ -112,7 +112,7 @@ closes. That's why the eval exists.
 | 41 ✅ | Agent eval: task-success-rate (83%) + false-rollback rate over labeled scenarios |
 | 42 ✅ | CLI (`triage` transcript + verdict, `eval`) + runnable demo |
 | 43 ✅ | Docs: `docs/architecture.md` (design rationale + component map + eval methodology) |
-| 44 | Final polish; ship v1.0 |
+| 44 ✅ | Final polish; **shipped v1.0** |
 
 ## License
 

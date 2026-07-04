@@ -1,6 +1,6 @@
 [project]
 name = "agentic-workflow"
-version = "0.1.0"
+version = "1.0.0"
 description = "Multi-agent AIOps incident-triage workflow: planner/executor, tools, guardrails, evals."
 readme = "README.md"
 requires-python = ">=3.13"

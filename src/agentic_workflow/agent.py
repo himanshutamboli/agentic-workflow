@@ -16,6 +16,7 @@ from agentic_workflow.guardrails import Approver, AutoApprover, Guardrails
 from agentic_workflow.logging_config import get_logger
 from agentic_workflow.planner import Planner
 from agentic_workflow.tools import ToolRegistry
+from agentic_workflow.tracing import NullTracer, Tracer
 
 logger = get_logger(__name__)
 
@@ -27,38 +28,59 @@ class Agent:
         registry: ToolRegistry,
         guardrails: Guardrails | None = None,
         approver: Approver | None = None,
+        tracer: Tracer | None = None,
     ) -> None:
         self.planner = planner
         self.registry = registry
         self.guardrails = guardrails or Guardrails()
         self.approver = approver or AutoApprover()
+        self.tracer = tracer or NullTracer()
 
     def run(self, incident: Incident) -> TriageResult:
         state = AgentState(incident=incident)
         spent = 0.0
-        for step in range(self.guardrails.max_steps):
-            action = self.planner.next_action(state, self.registry)
-            if action.kind == "finish":
-                return self._finish(state, action.result, step)
+        model = getattr(self.planner, "model", None)  # set by ClaudePlanner, absent otherwise
+        with self.tracer.trace("incident_triage", session_id=incident.id, model=model) as tr:
+            for step in range(self.guardrails.max_steps):
+                with tr.span(
+                    "plan", kind="llm" if model else "function", input=incident.title
+                ) as ps:
+                    action = self.planner.next_action(state, self.registry)
+                    ps.set_output(self._describe(action))
+                if action.kind == "finish":
+                    return self._finish(state, action.result, step)
 
-            cost = self.guardrails.cost_of(action.tool)
-            if spent + cost > self.guardrails.max_cost:
-                logger.warning(
-                    "cost cap ($%.2f) would be exceeded; escalating", self.guardrails.max_cost
+                cost = self.guardrails.cost_of(action.tool)
+                if spent + cost > self.guardrails.max_cost:
+                    logger.warning(
+                        "cost cap ($%.2f) would be exceeded; escalating", self.guardrails.max_cost
+                    )
+                    return self._escalate(state, "cost budget exhausted before a conclusion")
+
+                if self.guardrails.is_protected(action) and not self.approver.approve(
+                    action, state
+                ):
+                    logger.info("protected action %r denied; escalating to human", action.tool)
+                    return self._escalate(state, f"human approval required for {action.tool}")
+
+                with tr.span(action.tool, kind="tool", input=str(action.args)) as sp:
+                    observation = self._execute(action)
+                    sp.set_output(observation.summary)
+                spent += cost
+                state.observations.append(observation)
+                state.steps.append(
+                    Step(tool=action.tool, args=action.args, observation=observation)
                 )
-                return self._escalate(state, "cost budget exhausted before a conclusion")
 
-            if self.guardrails.is_protected(action) and not self.approver.approve(action, state):
-                logger.info("protected action %r denied; escalating to human", action.tool)
-                return self._escalate(state, f"human approval required for {action.tool}")
+            logger.info("triage hit max_steps (%d); escalating", self.guardrails.max_steps)
+            return self._escalate(state, "step budget exhausted")
 
-            observation = self._execute(action)
-            spent += cost
-            state.observations.append(observation)
-            state.steps.append(Step(tool=action.tool, args=action.args, observation=observation))
-
-        logger.info("triage hit max_steps (%d); escalating", self.guardrails.max_steps)
-        return self._escalate(state, "step budget exhausted")
+    @staticmethod
+    def _describe(action: Action) -> str:
+        if action.kind == "finish":
+            rec = action.result.recommended_action if action.result else "escalate"
+            return f"finish → {rec}"
+        return f"call {action.tool}({action.args})"
 
     def _execute(self, action: Action) -> Observation:
         """Run a tool with retries; a persistent failure is observed, not raised."""

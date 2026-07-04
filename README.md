@@ -40,6 +40,11 @@ right call?). This repo builds that agent as real software, not a prompt.
 - **`guardrails.py`** — `Guardrails` (step budget, per-tool retries on transient failure,
   cumulative cost cap) + an `Approver` gate for destructive tools (`rollback_deploy`).
   `AutoApprover` is the CI-safe default; `CallbackApprover` wires a real human-in-the-loop.
+- **`tracing.py` + `observed.py`** — a pluggable `Tracer`: the agent emits one trace per
+  incident and one span per planner decision + tool call. `NullTracer` is the no-op default;
+  the hook is shaped so
+  [`llm-observatory`](https://github.com/himanshutamboli/llm-observatory)'s `Tracer` plugs in
+  unchanged (`observed.py`) — **the observability flagship watches the agent flagship**.
 - **`tools_builtin.py` + `mock_ops.py`** — the concrete triage tools (recent deploys, error
   rate, metrics, log search, runbook lookup, and a side-effecting `rollback_deploy` action)
   over a deterministic mock ops backend seeded with a coherent incident scenario.
@@ -58,7 +63,7 @@ uv run pytest
 | 37 ✅ | Real tools: deploys, error rate, metrics, log search, runbook, rollback action |
 | 38 ✅ | Stateful orchestration loop + HeuristicPlanner (real reasoning) + ClaudePlanner |
 | 39 ✅ | Guardrails: retries, cost cap, step budget, human-in-the-loop approval |
-| 40 | **Instrument the agent with `llm-observatory`** (every run traced + scored) |
+| 40 ✅ | **Instrumented with `llm-observatory`** — every run is a persisted trace (plan/tool spans) |
 | 41 | Agent eval: task-success-rate over a test-task set |
 | 42 | Interface (CLI/UI) + runnable demo |
 | 43–44 | Docs + diagram + demo; ship v1.0 |

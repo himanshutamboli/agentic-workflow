@@ -64,7 +64,51 @@ class MockOps:
                     "WARN retrying payment (attempt 2)",
                     "ERROR NullPointer in CartService.checkout",
                 ],
-            )
+            ),
+            # Elevated errors + a fresh bad deploy → another clean rollback case.
+            "api-gateway": ServiceState(
+                error_rate=0.121,
+                baseline_error_rate=0.004,
+                p95_latency_ms=900,
+                baseline_latency_ms=300,
+                deploys=[
+                    Deploy("api-gateway@9f1c2d", "api-gateway", "carol", 35, "tighten route regex"),
+                ],
+                logs=["ERROR route /v2/orders returned 502", "ERROR upstream match failed"],
+            ),
+            # Elevated errors but the only deploy is stale (>60m) → nothing to roll back, escalate.
+            "search": ServiceState(
+                error_rate=0.060,
+                baseline_error_rate=0.005,
+                p95_latency_ms=700,
+                baseline_latency_ms=500,
+                deploys=[Deploy("search@77aa88", "search", "dave", 300, "add synonyms index")],
+                logs=["ERROR shard 3 unresponsive", "ERROR query timeout"],
+            ),
+            # High latency but error rate is NORMAL → not a rollback; escalate to investigate.
+            "auth": ServiceState(
+                error_rate=0.006,
+                baseline_error_rate=0.005,
+                p95_latency_ms=1800,
+                baseline_latency_ms=300,
+                deploys=[Deploy("auth@abc123", "auth", "erin", 10, "add rate limiter")],
+                logs=["WARN token verification slow", "WARN downstream LDAP latency high"],
+            ),
+            # TRAP: elevated errors + a fresh deploy, but the deploy is an innocent copy change and
+            # the logs point at the database. Correct call is escalate/investigate, NOT rollback —
+            # the rule-based planner can't tell coincidence from cause (see reports/agent_eval.md).
+            "billing": ServiceState(
+                error_rate=0.090,
+                baseline_error_rate=0.004,
+                p95_latency_ms=2100,
+                baseline_latency_ms=400,
+                deploys=[Deploy("billing@c0ffee", "billing", "frank", 15, "invoice copy tweak")],
+                logs=[
+                    "ERROR DB connection pool exhausted",
+                    "ERROR could not acquire connection within 5000ms",
+                    "ERROR DB connection pool exhausted",
+                ],
+            ),
         }
 
     def state(self, service: str) -> ServiceState:

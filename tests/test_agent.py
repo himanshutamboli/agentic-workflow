@@ -1,7 +1,8 @@
 import pytest
 
-from agentic_workflow.agent import Agent, AgentConfig
+from agentic_workflow.agent import Agent
 from agentic_workflow.domain import Incident, TriageResult
+from agentic_workflow.guardrails import Guardrails
 from agentic_workflow.planner import Action, ScriptedPlanner
 from agentic_workflow.tools import FunctionTool, ToolRegistry, ToolResult
 
@@ -57,7 +58,7 @@ def test_agent_runs_scripted_plan_and_records_observations():
 def test_agent_escalates_when_step_budget_exhausted():
     # planner keeps asking for a tool; agent should stop and escalate
     looping = ScriptedPlanner([Action(kind="tool", tool="deploys", args={"service": "x"})] * 10)
-    result = Agent(looping, _registry(), AgentConfig(max_steps=3)).run(INCIDENT)
+    result = Agent(looping, _registry(), Guardrails(max_steps=3)).run(INCIDENT)
     assert result.escalate
     assert "budget" in result.hypothesis
     assert len(result.observations) == 3  # exactly max_steps tool calls

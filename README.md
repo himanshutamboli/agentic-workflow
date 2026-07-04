@@ -24,7 +24,7 @@ right call?). This repo builds that agent as real software, not a prompt.
                  │              ├─ "tool"   → execute tool → record Observation ─┐
                  │              └─ "finish" → TriageResult (hypothesis, action)   │
                  └───────────────────────────◄─────────────────────────────────┘
-                                    guardrails (Day 39): max steps, retries, cost cap, HITL
+                    guardrails: max steps · retries · cost cap · human-in-the-loop approval
 ```
 
 - **`domain.py`** — `Incident`, `Observation`, `TriageResult`.
@@ -34,8 +34,12 @@ right call?). This repo builds that agent as real software, not a prompt.
   `HeuristicPlanner` (CI-safe default) does real rule-based triage — check error rate → recent
   deploys → logs → runbook → conclude, reading prior observations; `ClaudePlanner` (LLM) picks
   the next tool from the registry menu; `ScriptedPlanner` drives tests.
-- **`agent.py`** — the planner/executor loop: plan → execute → observe → repeat, bounded by a
-  step budget (escalates to on-call if exhausted).
+- **`agent.py`** — the planner/executor loop: plan → execute → observe → repeat. The executor
+  enforces the guardrails so no planner can escape them; it escalates to on-call whenever a
+  bound is hit or a conclusion can't be reached.
+- **`guardrails.py`** — `Guardrails` (step budget, per-tool retries on transient failure,
+  cumulative cost cap) + an `Approver` gate for destructive tools (`rollback_deploy`).
+  `AutoApprover` is the CI-safe default; `CallbackApprover` wires a real human-in-the-loop.
 - **`tools_builtin.py` + `mock_ops.py`** — the concrete triage tools (recent deploys, error
   rate, metrics, log search, runbook lookup, and a side-effecting `rollback_deploy` action)
   over a deterministic mock ops backend seeded with a coherent incident scenario.
@@ -53,7 +57,7 @@ uv run pytest
 | 36 ✅ | Architecture: workflow chosen (AIOps triage), agent skeleton + tool interface |
 | 37 ✅ | Real tools: deploys, error rate, metrics, log search, runbook, rollback action |
 | 38 ✅ | Stateful orchestration loop + HeuristicPlanner (real reasoning) + ClaudePlanner |
-| 39 | Guardrails: retries, timeouts, cost caps, human-in-the-loop |
+| 39 ✅ | Guardrails: retries, cost cap, step budget, human-in-the-loop approval |
 | 40 | **Instrument the agent with `llm-observatory`** (every run traced + scored) |
 | 41 | Agent eval: task-success-rate over a test-task set |
 | 42 | Interface (CLI/UI) + runnable demo |

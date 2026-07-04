@@ -5,9 +5,10 @@
 [![Ruff](https://img.shields.io/badge/lint-ruff-orange.svg)](https://github.com/astral-sh/ruff)
 [![status](https://img.shields.io/badge/status-building-blue.svg)](#roadmap)
 
-> A multi-agent **AIOps incident-triage** workflow: an agent ingests an incident, gathers
-> signals through tools, forms a hypothesis, and recommends remediation — with guardrails,
-> evals, and (Day 40) **instrumented by [`llm-observatory`](https://github.com/himanshutamboli/llm-observatory)**.
+> An **AIOps incident-triage** agent: it ingests an incident, gathers signals through tools,
+> forms a hypothesis, and recommends remediation — bounded by guardrails, measured by an eval,
+> and **instrumented by [`llm-observatory`](https://github.com/himanshutamboli/llm-observatory)**
+> so every run is a traceable, inspectable record.
 
 ## Why this exists
 
@@ -26,6 +27,8 @@ right call?). This repo builds that agent as real software, not a prompt.
                  └───────────────────────────◄─────────────────────────────────┘
                     guardrails: max steps · retries · cost cap · human-in-the-loop approval
 ```
+
+📐 **Design rationale, component map, and eval methodology:** [`docs/architecture.md`](docs/architecture.md).
 
 - **`domain.py`** — `Incident`, `Observation`, `TriageResult`.
 - **`tools.py`** — `Tool` protocol + `ToolRegistry`; `FunctionTool` adapts any callable. The
@@ -108,7 +111,8 @@ closes. That's why the eval exists.
 | 40 ✅ | **Instrumented with `llm-observatory`** — every run is a persisted trace (plan/tool spans) |
 | 41 ✅ | Agent eval: task-success-rate (83%) + false-rollback rate over labeled scenarios |
 | 42 ✅ | CLI (`triage` transcript + verdict, `eval`) + runnable demo |
-| 43–44 | Docs + diagram + demo; ship v1.0 |
+| 43 ✅ | Docs: `docs/architecture.md` (design rationale + component map + eval methodology) |
+| 44 | Final polish; ship v1.0 |
 
 ## License
 

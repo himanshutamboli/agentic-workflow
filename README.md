@@ -30,8 +30,10 @@ right call?). This repo builds that agent as real software, not a prompt.
 - **`domain.py`** — `Incident`, `Observation`, `TriageResult`.
 - **`tools.py`** — `Tool` protocol + `ToolRegistry`; `FunctionTool` adapts any callable. The
   registry exposes tool *specs* (name + description) as the planner's menu.
-- **`planner.py`** — `Planner` protocol + `Action` (a tool call or `finish`). A deterministic
-  `ScriptedPlanner` drives the skeleton and tests; an LLM planner arrives with the loop (Day 38).
+- **`planner.py`** — `Planner` protocol deciding the next `Action` from `AgentState`.
+  `HeuristicPlanner` (CI-safe default) does real rule-based triage — check error rate → recent
+  deploys → logs → runbook → conclude, reading prior observations; `ClaudePlanner` (LLM) picks
+  the next tool from the registry menu; `ScriptedPlanner` drives tests.
 - **`agent.py`** — the planner/executor loop: plan → execute → observe → repeat, bounded by a
   step budget (escalates to on-call if exhausted).
 - **`tools_builtin.py` + `mock_ops.py`** — the concrete triage tools (recent deploys, error
@@ -50,7 +52,7 @@ uv run pytest
 |---|---|
 | 36 ✅ | Architecture: workflow chosen (AIOps triage), agent skeleton + tool interface |
 | 37 ✅ | Real tools: deploys, error rate, metrics, log search, runbook, rollback action |
-| 38 | Orchestration loop with state + an LLM planner |
+| 38 ✅ | Stateful orchestration loop + HeuristicPlanner (real reasoning) + ClaudePlanner |
 | 39 | Guardrails: retries, timeouts, cost caps, human-in-the-loop |
 | 40 | **Instrument the agent with `llm-observatory`** (every run traced + scored) |
 | 41 | Agent eval: task-success-rate over a test-task set |
